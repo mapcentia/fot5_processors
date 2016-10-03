@@ -2,10 +2,11 @@
 
 namespace app\conf\wfsprocessors\classes\pre;
 
+use app\conf\App;
 use app\conf\wfsprocessors\PreInterface;
 use app\inc\Util;
 
-class Fot3 implements PreInterface
+class Pre_fot5 implements PreInterface
 {
     public static $transactions;
     public static $count;
@@ -328,7 +329,7 @@ class Fot3 implements PreInterface
          *  Get the live feature from Kortforsyningen WFS
          */
         if ($fotId) {
-            $featureFromWfs = Util::wget("http://kortforsyningen.kms.dk/fot2007_nohistory_test?LOGIN=Kommune461&PASSWORD=Jkertyu10&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME={$this->layer}&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $fotId);
+            $featureFromWfs = Util::wget("http://kortforsyningen.kms.dk/fot2007_nohistory_test?LOGIN=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&PASSWORD=" . App::$param["fot5"]["kortforsyningen"]["password"] . "&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME={$this->layer}&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $fotId);
             //TODO check if there is a feature
             //makeExceptionReport("Kan ikke hente feature fra Kortforsyningen. Måske er den opdateret i mellemtiden?");
 
@@ -367,7 +368,7 @@ class Fot3 implements PreInterface
         /**
          *  Get the live metadata object from Kortforsyningen WFS and unserialize to array
          */
-        $metaDataFromWfs = Util::wget("http://kortforsyningen.kms.dk/fot2007_nohistory_test?LOGIN=Kommune461&PASSWORD=Jkertyu10&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=ObjektMetadata&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $metaObjectId);
+        $metaDataFromWfs = Util::wget("http://kortforsyningen.kms.dk/fot2007_nohistory_test?LOGIN=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&PASSWORD=" . App::$param["fot5"]["kortforsyningen"]["password"] . "&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=ObjektMetadata&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $metaObjectId);
         //TODO check if there is a feature
 
         $this->unserializer->setOptions(["parseAttributes" => false]);
@@ -399,30 +400,30 @@ class Fot3 implements PreInterface
          */
         $liveAttrs = $fotArr["gml:featureMember"]["VEJMIDTE"];
         if ($arr["Property"][0]["Name"] == "the_geom" && sizeof($arr["Property"]) == 1 && isset($arr["Property"][0]["Value"]["LineString"])) {
-            $this->log(print_r("\n*** Feature indeholder kun geom og er linestring", true));
+            $this->log(print_r("\n*** Feature indeholder kun geom og er linestring ***\n", true));
 
             $arr["Property"][1]["Name"] = "fiktiv";
             $arr["Property"][1]["Value"] = $liveAttrs["Fiktiv"]["VEJMIDTE_Fiktiv"]["indhold"];
 
             $arr["Property"][2]["Name"] = "overflade";
-            $arr["Property"][2]["Value"] = $liveAttrs["Overflade"]["VEJMIDTE_Fiktiv"]["indhold"];
+            $arr["Property"][2]["Value"] = $liveAttrs["Overflade"]["VEJMIDTE_Overflade"]["indhold"];
 
             $arr["Property"][3]["Name"] = "plads";
-            $arr["Property"][3]["Value"] = $liveAttrs["Plads"]["VEJMIDTE_Fiktiv"]["indhold"];
+            $arr["Property"][3]["Value"] = $liveAttrs["Plads"]["VEJMIDTE_Plads"]["indhold"];
 
             $arr["Property"][4]["Name"] = "rundkoersel";
-            $arr["Property"][4]["Value"] = $liveAttrs["Rundkoersel"]["VEJMIDTE_Fiktiv"]["indhold"];
+            $arr["Property"][4]["Value"] = $liveAttrs["Rundkoersel"]["VEJMIDTE_Rundkoersel"]["indhold"];
 
             $arr["Property"][5]["Name"] = "tilogfrakoersel";
-            $arr["Property"][5]["Value"] = $liveAttrs["Tilogfrakoersel"]["VEJMIDTE_Fiktiv"]["indhold"];
+            $arr["Property"][5]["Value"] = $liveAttrs["Tilogfrakoersel"]["VEJMIDTE_Tilogfrakoersel"]["indhold"];
 
             $arr["Property"][6]["Name"] = "trafikart";
-            $arr["Property"][6]["Value"] = $liveAttrs["Trafikart"]["VEJMIDTE_Fiktiv"]["indhold"];
+            $arr["Property"][6]["Value"] = $liveAttrs["Trafikart"]["VEJMIDTE_Trafikart"]["indhold"];
 
             $arr["Property"][7]["Name"] = "vejklasse";
-            $arr["Property"][7]["Value"] = $liveAttrs["Vejklasse"]["VEJMIDTE_Fiktiv"]["indhold"];
+            $arr["Property"][7]["Value"] = $liveAttrs["Vejklasse"]["VEJMIDTE_Vejklasse"]["indhold"];
         }
-        $this->log(print_r($arr, true));
+        //$this->log(print_r($arr, true));
 
 
         /**

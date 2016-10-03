@@ -2,10 +2,11 @@
 
 namespace app\conf\wfsprocessors\classes\post;
 
+use app\conf\App;
 use app\conf\wfsprocessors\PostInterface;
-use app\conf\wfsprocessors\classes\pre\Fot3;
+use app\conf\wfsprocessors\classes\pre\Pre_fot5;
 
-class Fot5 implements PostInterface
+class Post_fot5 implements PostInterface
 {
     private $logFile;
     private $serializer;
@@ -57,14 +58,14 @@ class Fot5 implements PostInterface
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, "user=MH&pw=hksj7rHlf8&transactionxml=" . $transactionXml);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, "user=" . App::$param["fot5"]["geodanmark"]["user"] . "&pw=" . App::$param["fot5"]["geodanmark"]["pw"] . "&transactionxml=" . $transactionXml);
         return curl_exec($ch);
     }
 
     public function process()
     {
         // TODO Check if empty
-        $transactions = fot3::getTransactions();
+        $transactions = Pre_fot5::getTransactions();
 
         $transactionsReady = '<?xml version="1.0" encoding="UTF-8"?>
                 <wfs:Transaction version="1.1.0" service="WFS"
@@ -75,7 +76,7 @@ class Fot5 implements PostInterface
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                 xsi:schemaLocation="http://schemas.kms.dk/fot/FOT5.1_svid90_inputMedInterval_version1 http://schemas.kms.dk/fot/FOT5.1_svid90_inputMedInterval_version1.xsd http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">
                 ' . $transactions .
-                '<wfs:Native vendorId="FOTDK_escapeValidationReport_off" safeToIgnore="false"/>' .
+            '<wfs:Native vendorId="FOTDK_escapeValidationReport_off" safeToIgnore="false"/>' .
             '</wfs:Transaction>';
 
 
@@ -111,7 +112,7 @@ class Fot5 implements PostInterface
             $sql = "UPDATE geodanmark.bygning SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
-                $resUpdate->execute(["new"=>$newFotId, "old"=>$oldFotId]);
+                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
                 makeExceptionReport(print_r($e, true));
             }
@@ -119,7 +120,7 @@ class Fot5 implements PostInterface
             $sql = "UPDATE geodanmark.vejmidte SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
-                $resUpdate->execute(["new"=>$newFotId, "old"=>$oldFotId]);
+                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
                 makeExceptionReport(print_r($e, true));
             }
