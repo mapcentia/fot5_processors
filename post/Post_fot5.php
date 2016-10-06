@@ -103,7 +103,8 @@ class Post_fot5 implements PostInterface
         $res = [];
         if ($resFromFot["Exception"]) {
             $res["success"] = false;
-            $res["message"] = strip_tags(html_entity_decode($resFromFot["Exception"]["ExceptionText"]));
+            $res["message"] = print_r($resFromFot["Exception"]["ExceptionText"]["fejlrapport"]["objektype"], true);
+
 
         } else {
             $res["success"] = true;
