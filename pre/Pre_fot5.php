@@ -10,6 +10,11 @@ class Pre_fot5 implements PreInterface
 {
     public static $transactions;
     public static $count;
+    /**
+     * Flag if transaction is pre-processes, so Post can tell
+     * @var boolean
+     */
+    public static $flag;
     private $logFile;
     private $serializer;
     private $gmlCon;
@@ -226,15 +231,22 @@ class Pre_fot5 implements PreInterface
     }
 
     /**
+     * @return array
+     */
+    static public function getLayerWhitelist(){
+        return ["BYGNING", "VEJMIDTE"];
+    }
+
+    /**
      * @param $name
      * @return bool
      */
     private function checkTypeName($name)
     {
         $name = strtoupper($name);
-
-        if ($name == "BYGNING" || $name == "VEJMIDTE" || $name == "VEJMIDTE_BRUDT") {
+        if (in_array($name, self::getLayerWhitelist())) {
             $this->layer = $name;
+            self::$flag = true;
             return true;
         } else {
             return false;

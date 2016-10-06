@@ -64,6 +64,9 @@ class Post_fot5 implements PostInterface
 
     public function process()
     {
+        if (!Pre_fot5::$flag) {
+            return ["success" => true];
+        }
         // TODO Check if empty
         $transactions = Pre_fot5::getTransactions();
 
