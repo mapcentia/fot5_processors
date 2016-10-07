@@ -319,6 +319,8 @@ class Pre_fot5 implements PreInterface
      */
     public function processUpdate($arr, $typeName)
     {
+	global $postgisschema;
+
         if (!$this->checkTypeName($typeName)) {
             $res = [];
             $res["arr"] = $arr;
@@ -331,7 +333,7 @@ class Pre_fot5 implements PreInterface
          * Get FotId by looking up gml_id in table, because some clients doesn't send unaltered fields .
          */
         $tableAndGid = explode(".", $arr["Filter"]["FeatureId"]["fid"]);
-        $sql = "SELECT gml_id, ST_Length(the_geom) AS length FROM geodanmark.{$tableAndGid[0]} WHERE gid={$tableAndGid[1]}";
+        $sql = "SELECT gml_id, ST_Length(the_geom) AS length FROM {$postgisschema}.{$tableAndGid[0]} WHERE gid={$tableAndGid[1]}";
         $res = $this->db->execQuery($sql);
         $row = $this->db->fetchRow($res);
         $fotId = $row["gml_id"];
@@ -529,6 +531,8 @@ class Pre_fot5 implements PreInterface
 
     public function processDelete($arr, $typeName)
     {
+	global $postgisschema;
+
         if (!$this->checkTypeName($typeName)) {
             $res = [];
             $res["arr"] = $arr;
@@ -541,7 +545,7 @@ class Pre_fot5 implements PreInterface
          * Get FotId by looking up gml_id in table, because some clients doesn't send unaltered fields.
          */
         $tableAndGid = explode(".", $arr["Filter"]["FeatureId"]["fid"]);
-        $sql = "SELECT * FROM geodanmark.{$tableAndGid[0]} WHERE gid={$tableAndGid[1]}";
+        $sql = "SELECT * FROM {$postgisschema}.{$tableAndGid[0]} WHERE gid={$tableAndGid[1]}";
         $res = $this->db->execQuery($sql);
         $row = $this->db->fetchRow($res);
         $fotId = $row["gml_id"];

@@ -64,6 +64,8 @@ class Post_fot5 implements PostInterface
 
     public function process()
     {
+        global $postgisschema;
+
         if (!Pre_fot5::$flag) {
             return ["success" => true];
         }
@@ -113,19 +115,21 @@ class Post_fot5 implements PostInterface
             $res["success"] = true;
             $oldFotId = $resFromFot["wfs:InsertResults"]["wfs:Feature"]["handle"];
             $newFotId = $resFromFot["wfs:InsertResults"]["wfs:Feature"]["ogc:FeatureId"]["fid"];
-            $sql = "UPDATE geodanmark.bygning SET gml_id=:new WHERE gml_id=:old";
+            $sql = "UPDATE {$postgisschema}.ibygning SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
                 $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
+		$res["success"] = false;
                 makeExceptionReport(print_r($e, true));
             }
 
-            $sql = "UPDATE geodanmark.vejmidte SET gml_id=:new WHERE gml_id=:old";
+            $sql = "UPDATE {$postgisschema}.vejmidte SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
                 $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
+                $res["success"] = false;
                 makeExceptionReport(print_r($e, true));
             }
 
