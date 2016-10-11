@@ -91,6 +91,7 @@ class Post_fot5 implements PostInterface
         // HACK
         $transactionsReady = str_replace(' srsDimension="3"', "", $transactionsReady);
 
+        // Post the transaction
         $buffer = $this->post($transactionsReady);
 
         $this->log("\n    - Response -\n\n");
@@ -109,19 +110,19 @@ class Post_fot5 implements PostInterface
         if ($resFromFot["Exception"]) {
             $res["success"] = false;
             $res["message"] = print_r($resFromFot["Exception"]["ExceptionText"]["fejlrapport"]["objektype"], true);
-
-
         } else {
             $res["success"] = true;
             $oldFotId = $resFromFot["wfs:InsertResults"]["wfs:Feature"]["handle"];
             $newFotId = $resFromFot["wfs:InsertResults"]["wfs:Feature"]["ogc:FeatureId"]["fid"];
-            $sql = "UPDATE {$postgisschema}.ibygning SET gml_id=:new WHERE gml_id=:old";
+
+            $sql = "UPDATE {$postgisschema}.bygning SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
                 $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
-		$res["success"] = false;
-                makeExceptionReport(print_r($e, true));
+                $res["success"] = false;
+                $res["message"] = print_r($e, true);
+                return $res;
             }
 
             $sql = "UPDATE {$postgisschema}.vejmidte SET gml_id=:new WHERE gml_id=:old";
@@ -130,9 +131,29 @@ class Post_fot5 implements PostInterface
                 $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
                 $res["success"] = false;
-                makeExceptionReport(print_r($e, true));
+                $res["message"] = print_r($e, true);
+                return $res;
             }
 
+            $sql = "UPDATE {$postgisschema}.soe SET gml_id=:new WHERE gml_id=:old";
+            $resUpdate = $this->db->prepare($sql);
+            try {
+                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+            } catch (\PDOException $e) {
+                $res["success"] = false;
+                $res["message"] = print_r($e, true);
+                return $res;
+            }
+
+            $sql = "UPDATE {$postgisschema}.vandloebsmidte SET gml_id=:new WHERE gml_id=:old";
+            $resUpdate = $this->db->prepare($sql);
+            try {
+                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+            } catch (\PDOException $e) {
+                $res["success"] = false;
+                $res["message"] = print_r($e, true);
+                return $res;
+            }
         }
         return $res;
     }

@@ -11,7 +11,7 @@ class Pre_fot5 implements PreInterface
     public static $transactions;
     public static $count;
     /**
-     * Flag if transaction is pre-processes, so Post can tell
+     * Flag if transaction is pre-processes, so Post can tell and run
      * @var boolean
      */
     public static $flag;
@@ -100,7 +100,6 @@ class Pre_fot5 implements PreInterface
                      */
                     $lineLengthTo = $row["length"];
                     break;
-
             }
         }
         $lineLengthFrom = "0.00";
@@ -188,8 +187,52 @@ class Pre_fot5 implements PreInterface
                 case "under_minimum_bygning":
                     $properties .= $this->createProperty("Under_Minimum_Bygning", $prop["Value"], $operationType);
                     break;
-                case "the_geom":
+                // SOE
+                case "oe_under_minimum":
+                    $properties .= $this->createProperty("Oe_Under_Minimum", $prop["Value"], $operationType);
+                    break;
+                case "salt_soe":
+                    $properties .= $this->createProperty("Salt_Soe", $prop["Value"], $operationType);
+                    break;
+                case "soe_under_minimum":
+                    $properties .= $this->createProperty("Soe_Under_Minimum", $prop["Value"], $operationType);
+                    break;
+                case "soetype":
+                    $properties .= $this->createProperty("Soetype", $prop["Value"], $operationType);
+                    break;
+                case "temporaer":
+                    $properties .= $this->createProperty("Temporaer", $prop["Value"], $operationType);
+                    break;
+                // VANDSLOEBSMIDTE
+                case "ejer_vandloebsmidte":
+                    $properties .= $this->createProperty("Ejer_Vandloebsmidte", $prop["Value"], $operationType);
+                    break;
+                case "hovedforloeb":
+                    $properties .= $this->createProperty("Hovedforloeb", $prop["Value"], $operationType);
+                    break;
+                case "midtebredde":
+                    $properties .= $this->createProperty("Midtebredde", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
+                    break;
+                case "netvaerk":
+                    $properties .= $this->createProperty("Netvaerk", $prop["Value"], $operationType);
+                    break;
+                case "retning":
+                    $properties .= $this->createProperty("Retning", $prop["Value"], $operationType);
+                    break;
+                case "slutknude_vandloebsmidte":
+                    $properties .= $this->createProperty("Slutknude_Vandloebsmidte", $prop["Value"], $operationType);
+                    break;
+                case "startknude_vandloebsmidte":
+                    $properties .= $this->createProperty("Startknude_Vandloebsmidte", $prop["Value"], $operationType);
+                    break;
+                case "synlig_vandloebsmidte":
+                    $properties .= $this->createProperty("Synlig_Vandloebsmidte", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
+                    break;
+                case "vandloebstype":
+                    $properties .= $this->createProperty("Vandloebstype", $prop["Value"], $operationType);
+                    break;
 
+                case "the_geom":
                     break;
 
                 // Metadata
@@ -231,10 +274,12 @@ class Pre_fot5 implements PreInterface
     }
 
     /**
+     * Whitelist with layer names this processor runs on
      * @return array
      */
-    static public function getLayerWhitelist(){
-        return ["BYGNING", "VEJMIDTE"];
+    static public function getLayerWhitelist()
+    {
+        return ["BYGNING", "VEJMIDTE", "SOE", "VANDLOEBSMIDTE"];
     }
 
     /**
@@ -253,7 +298,10 @@ class Pre_fot5 implements PreInterface
         }
     }
 
-
+    /**
+     * @param array $values
+     * @return string
+     */
     private function createMetaObject($values = [])
     {
         $date = date('Y-m-d\TH:i:s');
@@ -319,8 +367,11 @@ class Pre_fot5 implements PreInterface
      */
     public function processUpdate($arr, $typeName)
     {
-	global $postgisschema;
+        global $postgisschema;
 
+        /**
+         * If layer is NOT in whitelist, return a success and unchanged $arr
+         */
         if (!$this->checkTypeName($typeName)) {
             $res = [];
             $res["arr"] = $arr;
@@ -351,6 +402,7 @@ class Pre_fot5 implements PreInterface
             makeExceptionReport("Hej");
         }
 
+
         /**
          * Unserialize live FOT feature from GeoDanmark and extract coords
          */
@@ -359,6 +411,7 @@ class Pre_fot5 implements PreInterface
         $coords = [];
         $this->unserializer->unserialize($featureFromWfs);
         $fotArr = $this->unserializer->getUnserializedData();
+
         array_walk_recursive($fotArr["gml:featureMember"][$this->layer], function (&$item, $key) {
             global $coords;
             global $metaObjectId;
@@ -377,7 +430,6 @@ class Pre_fot5 implements PreInterface
                 $metaObjectId = $item;
             }
         });
-
 
         /**
          *  Get the live metadata object from Kortforsyningen WFS and unserialize to array
@@ -407,38 +459,53 @@ class Pre_fot5 implements PreInterface
             }
         });
 
-        //$this->log(print_r($fotArr, true));
-        //die();
         /**
-         * Only geometry and linestring
+         * If transaction only contains geometry and is VEJMIDTE
          */
-        $liveAttrs = $fotArr["gml:featureMember"]["VEJMIDTE"];
-        if ($arr["Property"][0]["Name"] == "the_geom" && sizeof($arr["Property"]) == 1 && isset($arr["Property"][0]["Value"]["LineString"])) {
-            $this->log(print_r("\n*** Feature indeholder kun geom og er linestring ***\n", true));
+        if (isset($fotArr["gml:featureMember"]["VEJMIDTE"])) {
+            $liveAttrs = $fotArr["gml:featureMember"]["VEJMIDTE"];
+            if ($arr["Property"][0]["Name"] == "the_geom" && sizeof($arr["Property"]) == 1 && isset($arr["Property"][0]["Value"]["LineString"])) {
+                $this->log(print_r("\n*** Feature indeholder kun geom og er linestring ***\n", true));
 
-            $arr["Property"][1]["Name"] = "fiktiv";
-            $arr["Property"][1]["Value"] = $liveAttrs["Fiktiv"]["VEJMIDTE_Fiktiv"]["indhold"];
+                $arr["Property"][1]["Name"] = "fiktiv";
+                $arr["Property"][1]["Value"] = $liveAttrs["Fiktiv"]["VEJMIDTE_Fiktiv"]["indhold"];
 
-            $arr["Property"][2]["Name"] = "overflade";
-            $arr["Property"][2]["Value"] = $liveAttrs["Overflade"]["VEJMIDTE_Overflade"]["indhold"];
+                $arr["Property"][2]["Name"] = "overflade";
+                $arr["Property"][2]["Value"] = $liveAttrs["Overflade"]["VEJMIDTE_Overflade"]["indhold"];
 
-            $arr["Property"][3]["Name"] = "plads";
-            $arr["Property"][3]["Value"] = $liveAttrs["Plads"]["VEJMIDTE_Plads"]["indhold"];
+                $arr["Property"][3]["Name"] = "plads";
+                $arr["Property"][3]["Value"] = $liveAttrs["Plads"]["VEJMIDTE_Plads"]["indhold"];
 
-            $arr["Property"][4]["Name"] = "rundkoersel";
-            $arr["Property"][4]["Value"] = $liveAttrs["Rundkoersel"]["VEJMIDTE_Rundkoersel"]["indhold"];
+                $arr["Property"][4]["Name"] = "rundkoersel";
+                $arr["Property"][4]["Value"] = $liveAttrs["Rundkoersel"]["VEJMIDTE_Rundkoersel"]["indhold"];
 
-            $arr["Property"][5]["Name"] = "tilogfrakoersel";
-            $arr["Property"][5]["Value"] = $liveAttrs["Tilogfrakoersel"]["VEJMIDTE_Tilogfrakoersel"]["indhold"];
+                $arr["Property"][5]["Name"] = "tilogfrakoersel";
+                $arr["Property"][5]["Value"] = $liveAttrs["Tilogfrakoersel"]["VEJMIDTE_Tilogfrakoersel"]["indhold"];
 
-            $arr["Property"][6]["Name"] = "trafikart";
-            $arr["Property"][6]["Value"] = $liveAttrs["Trafikart"]["VEJMIDTE_Trafikart"]["indhold"];
+                $arr["Property"][6]["Name"] = "trafikart";
+                $arr["Property"][6]["Value"] = $liveAttrs["Trafikart"]["VEJMIDTE_Trafikart"]["indhold"];
 
-            $arr["Property"][7]["Name"] = "vejklasse";
-            $arr["Property"][7]["Value"] = $liveAttrs["Vejklasse"]["VEJMIDTE_Vejklasse"]["indhold"];
+                $arr["Property"][7]["Name"] = "vejklasse";
+                $arr["Property"][7]["Value"] = $liveAttrs["Vejklasse"]["VEJMIDTE_Vejklasse"]["indhold"];
+            }
         }
-        //$this->log(print_r($arr, true));
 
+        /**
+         * If transaction only contains geometry and is VANDLOEBSMIDTE
+         */
+        if (isset($fotArr["gml:featureMember"]["VANDLOEBSMIDTE"])) {
+            $liveAttrs = $fotArr["gml:featureMember"]["VANDLOEBSMIDTE"];
+            if ($arr["Property"][0]["Name"] == "the_geom" && sizeof($arr["Property"]) == 1 && isset($arr["Property"][0]["Value"]["LineString"])) {
+                $this->log(print_r("\n*** Feature indeholder kun geom og er linestring ***\n", true));
+
+                $arr["Property"][1]["Name"] = "midtebredde";
+                $arr["Property"][1]["Value"] = $liveAttrs["Midtebredde"]["VANDLOEBSMIDTE_Midtebredde"]["indhold"];
+
+                $arr["Property"][2]["Name"] = "synlig_vandloebsmidte";
+                $arr["Property"][2]["Value"] = $liveAttrs["Synlig_Vandloebsmidte"]["VANDLOEBSMIDTE_Synlig_Vandloebsmidte"]["indhold"];
+
+            }
+        }
 
         /**
          * Create transaction XML
@@ -531,7 +598,7 @@ class Pre_fot5 implements PreInterface
 
     public function processDelete($arr, $typeName)
     {
-	global $postgisschema;
+        global $postgisschema;
 
         if (!$this->checkTypeName($typeName)) {
             $res = [];
