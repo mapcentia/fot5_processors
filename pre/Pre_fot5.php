@@ -10,6 +10,7 @@ class Pre_fot5 implements PreInterface
 {
     public static $transactions;
     public static $count;
+
     /**
      * Flag if transaction is pre-processes, so Post can tell and run
      * @var boolean
@@ -22,6 +23,11 @@ class Pre_fot5 implements PreInterface
     private $db;
     private $layer;
     private $metaData;
+    /**
+     * Holds the current feature being updated
+     * @var
+     */
+    private $liveFeature;
 
     function __construct($db)
     {
@@ -37,7 +43,7 @@ class Pre_fot5 implements PreInterface
             'typeHints' => FALSE
         );
         $this->unserializer = new \XML_Unserializer($unserializer_options);
-        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodanmark.log", "a");
+        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodanmark.log", "w");
         if (!self::$count) {
             self::$count = 1;
         }
@@ -81,7 +87,10 @@ class Pre_fot5 implements PreInterface
         foreach ($arr as $prop) {
             switch ($prop["Name"]) {
                 case "the_geom";
-                    //Create new GML3 by using PostGIS
+
+                    // Create new GML3 by using PostGIS
+                    // ================================
+
                     $geom = $prop["Value"];
                     $this->serializer->serialize($geom);
                     $wktArr = $this->gmlCon->gmlToWKT($this->serializer->getSerializedData(), array());
@@ -95,9 +104,9 @@ class Pre_fot5 implements PreInterface
                         $geom = $this->createProperty("gml:curveProperty", $row["gml3"], $operationType);
                     }
 
-                    /**
-                     * Length from new feature
-                     */
+                    // Length from new feature
+                    // =======================
+
                     $lineLengthTo = $row["length"];
                     break;
             }
@@ -110,141 +119,108 @@ class Pre_fot5 implements PreInterface
         if (!$lineLengthTo) {
             $lineLengthTo = $length;
         }
+
+        foreach ($arr as $prop) {
+            $attrArray[] = $prop["Name"];
+        }
+        $attrList = [
+            "objekt_status" => ["Objekt_status", false],
+            "kommunekode" => ["Kommunekode", false],
+            "geometri_status" => ["Geometri_status", false],
+            "vejmidtetype" => ["Vejmidtetype", false],
+            "vejmyndighed" => ["Vejmyndighed", false],
+            "fiktiv" => ["Fiktiv", true],
+            "niveau" => ["Niveau", true],
+            "plads" => ["Plads", true],
+            "rundkoersel" => ["Rundkoersel", true],
+            "trafikart" => ["Trafikart", true],
+            "vejklasse" => ["Vejklasse", true],
+            "vejbredde" => ["Vejbredde", false],
+            "overflade" => ["Overflade", true],
+            "tilogfrakoersel" => ["Tilogfrakoersel", true],
+            "slutknude_vej" => ["Slutknude_Vej", false],
+            "startknude_vej" => ["Startknude_Vej", false],
+            "arealkvalitet" => ["Arealkvalitet", false],
+            "bygningstype" => ["Bygningstype", false],
+            "bygning_id" => ["Bygning_ID", false],
+            "metode_3d" => ["Metode_3D", false],
+            "maalested_bygning" => ["Maalested_Bygning", false],
+            "under_minimum_bygning" => ["Under_Minimum_Bygning", false],
+
+            // SOE
+            "oe_under_minimum" => ["Oe_Under_Minimum", false],
+            "salt_soe" => ["Salt_Soe", false],
+            "soe_under_minimum" => ["Soe_Under_Minimum", false],
+            "soetype" => ["Soetype", false],
+            "temporaer" => ["Temporaer", false],
+
+            // VANDSLOEBSMIDTE
+            "ejer_vandloebsmidte" => ["Ejer_Vandloebsmidte", false],
+            "hovedforloeb" => ["Hovedforloeb", false],
+            "midtebredde" => ["Midtebredde", true],
+            "netvaerk" => ["Netvaerk", false],
+            "retning" => ["Retning", false],
+            "slutknude_vandloebsmidte" => ["Slutknude_Vandloebsmidte", false],
+            "startknude_vandloebsmidte" => ["Startknude_Vandloebsmidte", false],
+            "synlig_vandloebsmidte" => ["Synlig_Vandloebsmidte", true],
+            "vandloebstype" => ["Vandloebstype", false],
+
+
+        ];
+        $flags = [];
+        $this->log(print_r($arr, true));
         foreach ($arr as $prop) {
             switch ($prop["Name"]) {
-                case "objekt_status":
-                    $properties .= $this->createProperty("Objekt_status", $prop["Value"], $operationType);
+                case "gml_id":
                     break;
-                case "_cprkommune":
-                    $properties .= $this->createProperty("CPRkommune", $prop["Value"], $operationType);
-                    break;
-                case "_cprvejkode":
-                    $properties .= $this->createProperty("CPRvejkode", $prop["Value"], $operationType);
-                    break;
-                case "kommunekode":
-                    $properties .= $this->createProperty("Kommunekode", $prop["Value"], $operationType);
-                    break;
-                case "geometri_status":
-                    $properties .= $this->createProperty("Geometri_status", $prop["Value"], $operationType);
-                    break;
-                case "vejmidtetype":
-                    $properties .= $this->createProperty("Vejmidtetype", $prop["Value"], $operationType);
-                    break;
-                case "vejmyndighed":
-                    $properties .= $this->createProperty("Vejmyndighed", $prop["Value"], $operationType);
-                    break;
-                case "fiktiv":
-                    $properties .= $this->createProperty("Fiktiv", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "niveau":
-                    $properties .= $this->createProperty("Niveau", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "plads":
-                    $properties .= $this->createProperty("Plads", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "rundkoersel":
-                    $properties .= $this->createProperty("Rundkoersel", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "trafikart":
-                    $properties .= $this->createProperty("Trafikart", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "vejklasse":
-                    $properties .= $this->createProperty("Vejklasse", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "_vejbredde":
-                    $properties .= $this->createProperty("Vejbredde", $prop["Value"], $operationType);
-                    break;
-                case "overflade":
-                    $properties .= $this->createProperty("Overflade", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "tilogfrakoersel":
-                    $properties .= $this->createProperty("Tilogfrakoersel", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "slutknude_vej":
-                    $properties .= $this->createProperty("Slutknude_Vej", $prop["Value"], $operationType);
-                    break;
-                case "startknude_vej":
-                    $properties .= $this->createProperty("Startknude_Vej", $prop["Value"], $operationType);
-                    break;
-                case "arealkvalitet":
-                    $properties .= $this->createProperty("Arealkvalitet", $prop["Value"], $operationType);
-                    break;
-                case "bygningstype":
-                    $properties .= $this->createProperty("Bygningstype", $prop["Value"], $operationType);
-                    break;
-                case "bygning_id":
-                    $properties .= $this->createProperty("Bygning_ID", $prop["Value"], $operationType);
-                    break;
-                case "metode_3d":
-                    $properties .= $this->createProperty("Metode_3D", $prop["Value"], $operationType);
-                    break;
-                case "bygning_id":
-                    $properties .= $this->createProperty("Bygning_ID", $prop["Value"], $operationType);
-                    break;
-                case "maalested_bygning":
-                    $properties .= $this->createProperty("Maalested_Bygning", $prop["Value"], $operationType);
-                    break;
-                case "under_minimum_bygning":
-                    $properties .= $this->createProperty("Under_Minimum_Bygning", $prop["Value"], $operationType);
-                    break;
-                // SOE
-                case "oe_under_minimum":
-                    $properties .= $this->createProperty("Oe_Under_Minimum", $prop["Value"], $operationType);
-                    break;
-                case "salt_soe":
-                    $properties .= $this->createProperty("Salt_Soe", $prop["Value"], $operationType);
-                    break;
-                case "soe_under_minimum":
-                    $properties .= $this->createProperty("Soe_Under_Minimum", $prop["Value"], $operationType);
-                    break;
-                case "soetype":
-                    $properties .= $this->createProperty("Soetype", $prop["Value"], $operationType);
-                    break;
-                case "temporaer":
-                    $properties .= $this->createProperty("Temporaer", $prop["Value"], $operationType);
-                    break;
-                // VANDSLOEBSMIDTE
-                case "ejer_vandloebsmidte":
-                    $properties .= $this->createProperty("Ejer_Vandloebsmidte", $prop["Value"], $operationType);
-                    break;
-                case "hovedforloeb":
-                    $properties .= $this->createProperty("Hovedforloeb", $prop["Value"], $operationType);
-                    break;
-                case "midtebredde":
-                    $properties .= $this->createProperty("Midtebredde", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "netvaerk":
-                    $properties .= $this->createProperty("Netvaerk", $prop["Value"], $operationType);
-                    break;
-                case "retning":
-                    $properties .= $this->createProperty("Retning", $prop["Value"], $operationType);
-                    break;
-                case "slutknude_vandloebsmidte":
-                    $properties .= $this->createProperty("Slutknude_Vandloebsmidte", $prop["Value"], $operationType);
-                    break;
-                case "startknude_vandloebsmidte":
-                    $properties .= $this->createProperty("Startknude_Vandloebsmidte", $prop["Value"], $operationType);
-                    break;
-                case "synlig_vandloebsmidte":
-                    $properties .= $this->createProperty("Synlig_Vandloebsmidte", $prop["Value"], $operationType, ["fra" => $lineLengthFrom, "til" => $lineLengthTo]);
-                    break;
-                case "vandloebstype":
-                    $properties .= $this->createProperty("Vandloebstype", $prop["Value"], $operationType);
-                    break;
-
                 case "the_geom":
                     break;
 
-                // Metadata
                 case "meta_producentinfo":
                     if (!$prop["Value"]) {
                         makeExceptionReport("Du skal angive 'meta_producentinfo'");
                     }
                     $this->metaData["meta_producentinfo"] = $prop["Value"];
                     break;
+                default:
+                    if (array_reverse(explode("_", $prop["Name"]))[0] == "fra" || array_reverse(explode("_", $prop["Name"]))[0] == "til") {
+                        if (!in_array(explode("_", $prop["Name"])[0], $attrArray) && !isset($flags[explode("_", $prop["Name"])[0]])) {
+                            //$this->log(print_r($arr, true));
+                            $val = $this->createPgArray($this->liveFeature["gml:featureMember"][$this->layer][$attrList[explode("_", $prop["Name"])[0]][0]], $this->layer, $attrList[explode("_", $prop["Name"])[0]][0]);
+                            $properties .= $this->createProperty($attrList[explode("_", $prop["Name"])[0]][0],
+                                $val,
+                                $operationType,
+                                ["fra" => $lineLengthFrom, "til" => $lineLengthTo],
+                                $arr);
+                            $flags[explode("_", $prop["Name"])[0]] = true;
+                        }
+                        break;
+                    }
+
+                    $properties .= $this->createProperty($attrList[$prop["Name"]][0], $prop["Value"],
+                        $operationType,
+                        $attrList[$prop["Name"]][1] ? ["fra" => $lineLengthFrom, "til" => $lineLengthTo] : null,
+                        $attrList[$prop["Name"]][1] ? $arr : null);
+                    break;
             }
         }
         return $properties . $geom;
+    }
+
+    private function createPgArray($arr, $layer, $el)
+    {
+        if (is_array($arr[0])) {
+            $tmp = [];
+            foreach ($arr as $v) {
+                $tmp[] = $v[$layer . "_" . $el]["indhold"];
+            }
+            $val = "{\"" . implode("\",\"", $tmp) . "\"}";
+        } else {
+            $val = "{\"" . $this->liveFeature["gml:featureMember"][$layer][$el][$layer . "_" . $el]["indhold"] . "\"}";;
+        }
+
+        $this->log($val);
+        return $val;
     }
 
     /**
@@ -254,21 +230,96 @@ class Pre_fot5 implements PreInterface
      * @param null $attrs
      * @return string
      */
-    private function createProperty($name, $value, $operationType, $attrs = null)
+    private function createProperty($name, $value, $operationType, $attrs = null, $fullFeature = null)
     {
         $tmp = [];
         $attrStr = "";
+        $fra = [];
+        $til = [];
         if (is_array($attrs)) {
             foreach ($attrs as $k => $v) {
                 $tmp[] = " {$k}=\"{$v}\"";
             }
             $attrStr = implode("", $tmp);
+            if ($value) {
+                $value = $this->pgArrayParse($value);
+            }
         }
         if ($operationType == "update") {
-            $el = "<wfs:Property>\n\t<wfs:Name>{$name}</wfs:Name>\n\t<wfs:Value{$attrStr}>{$value}</wfs:Value>\n</wfs:Property>\n";
+            $el = "";
+
+            // Set attributes Fra and Til on intervals bigger than one
+            // =======================================================
+
+            if (is_array($value) && sizeof($value) > 1) {
+                for ($i = 0; $i < sizeof($value); $i++) {
+                    $a = $this->liveFeature["gml:featureMember"][$this->layer][$name][$i] ?: [$this->layer . "_" . $name => array_values($this->liveFeature["gml:featureMember"][$this->layer][$name])[0]];
+                    //$this->log(print_r($a, true));
+                    for ($u = 0; $u < sizeof($fullFeature); $u++) {
+                        if ($fullFeature[$u]["Name"] == strtolower($name) . "_fra" && (!$fra[$name][$i])) {
+                            $fra[$name][$i] = $this->pgArrayParse($fullFeature[$u]["Value"])[$i];
+                        }
+                        if ($fullFeature[$u]["Name"] == strtolower($name) . "_til" && (!$til[$name][$i])) {
+                            $til[$name][$i] = $this->pgArrayParse($fullFeature[$u]["Value"])[$i];
+                        }
+
+                        // We set 'Til' of last interval to whole distance of feature
+                        // ==========================================================
+
+                        if ($i == sizeof($value) - 1) {
+                            $til[$name][$i] = $attrs["til"];
+                        }
+                    }
+
+
+                    $attrStr = " fra=\"" . ($fra[$name][$i] ?: $a[$this->layer . "_" . $name]["Fra"]) . "\" til=\"" . ($til[$name][$i] ?: $a[$this->layer . "_" . $name]["Til"]) . "\"";
+                    $el .= "<wfs:Property>\n\t<wfs:Name>{$name}</wfs:Name>\n\t";
+                    $el .= "<wfs:Value{$attrStr}>" . trim($value[$i]) . "</wfs:Value>\n";
+                    $el .= "</wfs:Property>\n";
+                }
+            } else {
+
+                // Set attributes Fra and Til on non intervals and
+                // intervals with length of one
+                // ===============================================
+
+                if (is_array($value)) {
+                    $value = $value[0];
+                }
+                $el .= "<wfs:Property>\n\t<wfs:Name>{$name}</wfs:Name>\n\t";
+                $el .= "<wfs:Value{$attrStr}>" . trim($value) . "</wfs:Value>\n";
+                $el .= "</wfs:Property>\n";
+            }
 
         } else {
-            $el = "<{$name}{$attrStr}>{$value}</{$name}>\n";
+            $el = "";
+            if (is_array($value) && sizeof($value) > 1) {
+                for ($i = 0; $i < sizeof($value); $i++) {
+                    for ($u = 0; $u < sizeof($fullFeature); $u++) {
+                        if ($fullFeature[$u]["Name"] == strtolower($name) . "_fra" && (!$fra[$name][$i])) {
+                            $fra[$name][$i] = $this->pgArrayParse($fullFeature[$u]["Value"])[$i];
+                        }
+                        if ($fullFeature[$u]["Name"] == strtolower($name) . "_til" && (!$til[$name][$i])) {
+                            $til[$name][$i] = $this->pgArrayParse($fullFeature[$u]["Value"])[$i];
+                        }
+
+                        // We set 'Til' of last interval to whole distance of feature
+                        // ==========================================================
+
+                        if ($i == sizeof($value) - 1) {
+                            $til[$name][$i] = $attrs["til"];
+                        }
+                    }
+
+                    $attrStr = " fra=\"" . $fra[$name][$i] . "\" til=\"" . $til[$name][$i] . "\"";
+                    $el .= "<{$name}{$attrStr}>" . trim($value[$i]) . "</{$name}>\n";
+                }
+            } else {
+                if (is_array($value)) {
+                    $value = $value[0];
+                }
+                $el .= "<{$name}{$attrStr}>" . trim($value) . "</{$name}>\n";
+            }
         }
         return $el;
     }
@@ -296,6 +347,21 @@ class Pre_fot5 implements PreInterface
         } else {
             return false;
         }
+    }
+
+    /**
+     * @param $literal
+     * @return array|void
+     */
+    private function pgArrayParse($literal)
+    {
+        if ($literal == '') return;
+        preg_match_all('/(?<=^\{|,)(([^,"{]*)|\s*"((?:[^"\\\\]|\\\\(?:.|[0-9]+|x[0-9a-f]+))*)"\s*)(,|(?<!^\{)(?=\}$))/i', $literal, $matches, PREG_SET_ORDER);
+        $values = [];
+        foreach ($matches as $match) {
+            $values[] = $match[3] != '' ? stripcslashes($match[3]) : (strtolower($match[2]) == 'null' ? null : $match[2]);
+        }
+        return $values;
     }
 
     /**
@@ -402,7 +468,6 @@ class Pre_fot5 implements PreInterface
             makeExceptionReport("Hej");
         }
 
-
         /**
          * Unserialize live FOT feature from GeoDanmark and extract coords
          */
@@ -411,6 +476,8 @@ class Pre_fot5 implements PreInterface
         $coords = [];
         $this->unserializer->unserialize($featureFromWfs);
         $fotArr = $this->unserializer->getUnserializedData();
+        $this->liveFeature = $fotArr;
+
 
         array_walk_recursive($fotArr["gml:featureMember"][$this->layer], function (&$item, $key) {
             global $coords;
@@ -459,34 +526,86 @@ class Pre_fot5 implements PreInterface
             }
         });
 
-        /**
-         * If transaction only contains geometry and is VEJMIDTE
-         */
+
+        // If transaction only contains geometry and is VEJMIDTE
+        // =====================================================
+
         if (isset($fotArr["gml:featureMember"]["VEJMIDTE"])) {
             $liveAttrs = $fotArr["gml:featureMember"]["VEJMIDTE"];
             if ($arr["Property"][0]["Name"] == "the_geom" && sizeof($arr["Property"]) == 1 && isset($arr["Property"][0]["Value"]["LineString"])) {
                 $this->log(print_r("\n*** Feature indeholder kun geom og er linestring ***\n", true));
 
+                // Fiktiv
+                // ======
+
                 $arr["Property"][1]["Name"] = "fiktiv";
-                $arr["Property"][1]["Value"] = $liveAttrs["Fiktiv"]["VEJMIDTE_Fiktiv"]["indhold"];
+                $arr["Property"][1]["Value"] = $this->createPgArray(
+                    $liveAttrs["Fiktiv"],
+                    $this->layer,
+                    "Fiktiv"
+                );
+
+
+                // Overflade
+                // =========
 
                 $arr["Property"][2]["Name"] = "overflade";
-                $arr["Property"][2]["Value"] = $liveAttrs["Overflade"]["VEJMIDTE_Overflade"]["indhold"];
+                $arr["Property"][2]["Value"] = $this->createPgArray(
+                    $liveAttrs["Overflade"],
+                    $this->layer,
+                    "Overflade"
+                );
+
+                // Plads
+                // =====
 
                 $arr["Property"][3]["Name"] = "plads";
-                $arr["Property"][3]["Value"] = $liveAttrs["Plads"]["VEJMIDTE_Plads"]["indhold"];
+                $arr["Property"][3]["Value"] = $this->createPgArray(
+                    $liveAttrs["Plads"],
+                    $this->layer,
+                    "Plads"
+                );
+
+                // Rundkoersel
+                // ===========
 
                 $arr["Property"][4]["Name"] = "rundkoersel";
-                $arr["Property"][4]["Value"] = $liveAttrs["Rundkoersel"]["VEJMIDTE_Rundkoersel"]["indhold"];
+                $arr["Property"][4]["Value"] = $this->createPgArray(
+                    $liveAttrs["Rundkoersel"],
+                    $this->layer,
+                    "Rundkoersel"
+                );
+
+                // Tilogfrakoersel
+                // ===============
 
                 $arr["Property"][5]["Name"] = "tilogfrakoersel";
-                $arr["Property"][5]["Value"] = $liveAttrs["Tilogfrakoersel"]["VEJMIDTE_Tilogfrakoersel"]["indhold"];
+                $arr["Property"][5]["Value"] = $this->createPgArray(
+                    $liveAttrs["Tilogfrakoersel"],
+                    $this->layer,
+                    "Tilogfrakoersel"
+                );
+
+                // Trafikart
+                // =========
 
                 $arr["Property"][6]["Name"] = "trafikart";
-                $arr["Property"][6]["Value"] = $liveAttrs["Trafikart"]["VEJMIDTE_Trafikart"]["indhold"];
+                $arr["Property"][6]["Value"] = $this->createPgArray(
+                    $liveAttrs["Trafikart"],
+                    $this->layer,
+                    "Trafikart"
+                );
+
+                // Vejklasse
+                // =========
 
                 $arr["Property"][7]["Name"] = "vejklasse";
-                $arr["Property"][7]["Value"] = $liveAttrs["Vejklasse"]["VEJMIDTE_Vejklasse"]["indhold"];
+                $arr["Property"][7]["Value"] = $this->createPgArray(
+                    $liveAttrs["Vejklasse"],
+                    $this->layer,
+                    "Vejklasse"
+                );
+
             }
         }
 
@@ -510,6 +629,7 @@ class Pre_fot5 implements PreInterface
         /**
          * Create transaction XML
          */
+
         $properties = $this->createProperties($arr["Property"], "update", $fotLength);
         self::$transactions .= '
             <wfs:Insert handle="ObjektMetadata.' . self::$count . '">' .
@@ -530,6 +650,7 @@ class Pre_fot5 implements PreInterface
                 </ogc:Filter>
             </wfs:Update>';
         self::$count = self::$count + 1;
+
 
         $res = [];
         $res["arr"] = $arr;
@@ -572,8 +693,8 @@ class Pre_fot5 implements PreInterface
             }
         });
 
-
         $properties = $this->createProperties($arr, "insert");
+
         self::$transactions .=
             '<wfs:Insert handle="ObjektMetadata.' . self::$count . '">' .
 
@@ -587,6 +708,8 @@ class Pre_fot5 implements PreInterface
                 </' . $this->layer . '>
             </wfs:Insert>';
         self::$count++;
+
+        //$this->log(print_r(self::$transactions, true));
 
         $res = [];
         $res["arr"] = $arr;

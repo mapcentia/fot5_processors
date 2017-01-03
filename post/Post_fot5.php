@@ -118,41 +118,43 @@ class Post_fot5 implements PostInterface
             $sql = "UPDATE {$postgisschema}.bygning SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
-                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                //$resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
-                $res["success"] = false;
-                $res["message"] = print_r($e, true);
-                return $res;
+                //$res["success"] = false;
+                //$res["message"] = $e->getMessage();
+                //return $res;
             }
 
+            //$this->log(print_r($newFotId, true));
+            //$this->log(print_r($oldFotId, true));
             $sql = "UPDATE {$postgisschema}.vejmidte SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
                 $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
                 $res["success"] = false;
-                $res["message"] = print_r($e, true);
+                $res["message"] = $e->getMessage();
                 return $res;
             }
 
             $sql = "UPDATE {$postgisschema}.soe SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
-                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                //$resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
-                $res["success"] = false;
-                $res["message"] = print_r($e, true);
-                return $res;
+                //$res["success"] = false;
+                //$res["message"] = print_r($e, true);
+                //return $res;
             }
 
             $sql = "UPDATE {$postgisschema}.vandloebsmidte SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
-                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                //$resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
-                $res["success"] = false;
-                $res["message"] = print_r($e, true);
-                return $res;
+                //$res["success"] = false;
+                //$res["message"] = print_r($e, true);
+                //return $res;
             }
         }
         return $res;
