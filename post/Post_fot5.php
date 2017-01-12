@@ -148,11 +148,11 @@ class Post_fot5 implements PostInterface
             $sql = "UPDATE {$postgisschema}.soe SET gml_id=:new WHERE gml_id=:old";
             $resUpdate = $this->db->prepare($sql);
             try {
-                //$resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
             } catch (\PDOException $e) {
-                //$res["success"] = false;
-                //$res["message"] = print_r($e, true);
-                //return $res;
+                $res["success"] = false;
+                $res["message"] = print_r($e, true);
+                return $res;
             }
 
             // Store the new FeatureId for VANDLOEBSMIDTE in PostgreSQL
