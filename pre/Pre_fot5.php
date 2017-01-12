@@ -278,7 +278,6 @@ class Pre_fot5 implements PreInterface
                 // Set attributes Fra and Til on non intervals and
                 // intervals with length of one
                 // ===============================================
-
                 if (is_array($value)) {
                     $value = $value[0];
                 }
@@ -301,7 +300,6 @@ class Pre_fot5 implements PreInterface
 
                         // We set 'Til' of last interval to whole distance of feature
                         // ==========================================================
-
                         if ($i == sizeof($value) - 1) {
                             $til[$name][$i] = $attrs["til"];
                         }
@@ -436,15 +434,14 @@ class Pre_fot5 implements PreInterface
 
             // calculation of distance between the two point
             // ============================================
-
             if ($diff <= $snapToleranceTmp) {
                 $snapToleranceTmp = $diff;
                 $countTmp = $u;
                 $z = $coords[$u][2];
             }
         }
-        $this->log("Eks.: " . $coords[$countTmp][0] . " " . $coords[$countTmp][1] . " " . $coords[$countTmp][2] . "\n");
-        $this->log("Ny  : " . round($coord[0],2) . " " . round($coord[1],2) . " " . $z . "\n\n");
+        //$this->log("Eks.: " . $coords[$countTmp][0] . " " . $coords[$countTmp][1] . " " . $coords[$countTmp][2] . "\n");
+        //$this->log("Ny  : " . round($coord[0],2) . " " . round($coord[1],2) . " " . $z . "\n\n");
         return $z;
     }
 
