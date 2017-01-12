@@ -86,7 +86,7 @@ class Post_fot5 implements PostInterface
             '</wfs:Transaction>';
 
 
-        $this->log("<!---------- " . date('l jS \of F Y H:i:s') . " user: " . App::$param["fot5"]["geodanmark"][$this->gc2User]["user"] . " ---------->\n\n");
+        $this->log("<---------- " . date('l jS \of F Y H:i:s') . " user: " . App::$param["fot5"]["geodanmark"][$this->gc2User]["user"] . " ---------->\n\n");
         $this->log(($this->formatXml($transactionsReady)) . "\n");
 
         // HACK
@@ -95,7 +95,7 @@ class Post_fot5 implements PostInterface
         // Post the transaction
         $buffer = $this->post($transactionsReady);
 
-        $this->log("<!---------- Response fra Geodanmark ---------->\n\n");
+        $this->log("<---------- Response fra Geodanmark ---------->\n\n");
 
         $this->log($this->formatXml($buffer) . "\n\n");
         $this->log("\n\n");
