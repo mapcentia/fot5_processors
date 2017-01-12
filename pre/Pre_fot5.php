@@ -23,6 +23,7 @@ class Pre_fot5 implements PreInterface
     private $db;
     private $layer;
     private $metaData;
+
     /**
      * Holds the current feature being updated
      * @var
@@ -31,9 +32,9 @@ class Pre_fot5 implements PreInterface
 
     function __construct($db)
     {
-        /**
-         * Init objects
-         */
+        // Init objects
+        // ============
+
         $this->db = $db;
         $this->serializer = new \XML_Serializer();
         $this->gmlCon = new \gmlConverter();
@@ -113,9 +114,9 @@ class Pre_fot5 implements PreInterface
         }
         $lineLengthFrom = "0.00";
 
-        /**
-         * Length from live feature
-         */
+        // Length from live feature
+        // ========================
+
         if (!$lineLengthTo) {
             $lineLengthTo = $length;
         }
@@ -168,7 +169,6 @@ class Pre_fot5 implements PreInterface
 
         ];
         $flags = [];
-        $this->log(print_r($arr, true));
         foreach ($arr as $prop) {
             switch ($prop["Name"]) {
                 case "gml_id":
@@ -185,7 +185,6 @@ class Pre_fot5 implements PreInterface
                 default:
                     if (array_reverse(explode("_", $prop["Name"]))[0] == "fra" || array_reverse(explode("_", $prop["Name"]))[0] == "til") {
                         if (!in_array(explode("_", $prop["Name"])[0], $attrArray) && !isset($flags[explode("_", $prop["Name"])[0]])) {
-                            //$this->log(print_r($arr, true));
                             $val = $this->createPgArray($this->liveFeature["gml:featureMember"][$this->layer][$attrList[explode("_", $prop["Name"])[0]][0]], $this->layer, $attrList[explode("_", $prop["Name"])[0]][0]);
                             $properties .= $this->createProperty($attrList[explode("_", $prop["Name"])[0]][0],
                                 $val,
@@ -218,8 +217,6 @@ class Pre_fot5 implements PreInterface
         } else {
             $val = "{\"" . $this->liveFeature["gml:featureMember"][$layer][$el][$layer . "_" . $el]["indhold"] . "\"}";;
         }
-
-        $this->log($val);
         return $val;
     }
 
@@ -254,7 +251,6 @@ class Pre_fot5 implements PreInterface
             if (is_array($value) && sizeof($value) > 1) {
                 for ($i = 0; $i < sizeof($value); $i++) {
                     $a = $this->liveFeature["gml:featureMember"][$this->layer][$name][$i] ?: [$this->layer . "_" . $name => array_values($this->liveFeature["gml:featureMember"][$this->layer][$name])[0]];
-                    //$this->log(print_r($a, true));
                     for ($u = 0; $u < sizeof($fullFeature); $u++) {
                         if ($fullFeature[$u]["Name"] == strtolower($name) . "_fra" && (!$fra[$name][$i])) {
                             $fra[$name][$i] = $this->pgArrayParse($fullFeature[$u]["Value"])[$i];
@@ -427,12 +423,45 @@ class Pre_fot5 implements PreInterface
         return $xml;
     }
 
+    private function snapCoordToZ($coord)
+    {
+        global $coords;
+        $z = -999;
+        $snapToleranceTmp = 1000000;
+        $countTmp = 0;
+        for ($u = 1; $u < sizeof($coords); $u++) {
+            $diffX = $coords[$u][0] - $coord[0];
+            $diffY = $coords[$u][1] - $coord[1];
+            $diff = sqrt(pow($diffX, 2) + pow($diffY, 2));
+
+            // calculation of distance between the two point
+            // ============================================
+
+            if ($diff <= $snapToleranceTmp) {
+                $snapToleranceTmp = $diff;
+                $countTmp = $u;
+                $z = $coords[$u][2];
+            }
+        }
+        $this->log("Eks.: " . $coords[$countTmp][0] . " " . $coords[$countTmp][1] . " " . $coords[$countTmp][2] . "\n");
+        $this->log("Ny  : " . round($coord[0],2) . " " . round($coord[1],2) . " " . $z . "\n\n");
+        return $z;
+    }
+
+    private function getZCoord(){
+
+    }
+
+    // Start of implemented methods
+    // ============================
+
     /**
      * @param $arr
      * @return array
      */
     public function processUpdate($arr, $typeName)
     {
+
         global $postgisschema;
 
         /**
@@ -468,17 +497,15 @@ class Pre_fot5 implements PreInterface
             makeExceptionReport("Hej");
         }
 
-        /**
-         * Unserialize live FOT feature from GeoDanmark and extract coords
-         */
+        // Unserialize live FOT feature from GeoDanmark and extract coords
+        // ===============================================================
+
         global $coords;
         global $metaObjectId;
         $coords = [];
         $this->unserializer->unserialize($featureFromWfs);
         $fotArr = $this->unserializer->getUnserializedData();
         $this->liveFeature = $fotArr;
-
-
         array_walk_recursive($fotArr["gml:featureMember"][$this->layer], function (&$item, $key) {
             global $coords;
             global $metaObjectId;
@@ -498,9 +525,10 @@ class Pre_fot5 implements PreInterface
             }
         });
 
-        /**
-         *  Get the live metadata object from Kortforsyningen WFS and unserialize to array
-         */
+        // Get the live metadata object from Kortforsyningen WFS
+        // and unserialize to array
+        // =====================================================
+
         $metaDataFromWfs = Util::wget("http://kortforsyningen.kms.dk/fot2007_nohistory_test?LOGIN=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&PASSWORD=" . App::$param["fot5"]["kortforsyningen"]["password"] . "&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=ObjektMetadata&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $metaObjectId);
         //TODO check if there is a feature
 
@@ -511,15 +539,16 @@ class Pre_fot5 implements PreInterface
             makeExceptionReport("Kan ikke hente metadata-objektet fra Fot. Måske er det ikke parat fra en tidligere editering. Prøv at gemme igen om et par sekunder.");
         }
 
-        /**
-         * Add Z coord to edited feature from client
-         */
+        // Add Z coord to edited feature from client
+        // =========================================
+
         array_walk_recursive($arr, function (&$item, $key) {
             if ($key == "coordinates") {
                 $coordsWithZ = [];
                 $coords = explode(" ", $item);
                 foreach ($coords as $coord) {
-                    $coord = $coord . ",1.23";
+                    $z = $this->snapCoordToZ(explode(",", $coord));
+                    $coord = $coord . "," . $z;
                     $coordsWithZ[] = $coord;
                 }
                 $item = implode(" ", $coordsWithZ);
@@ -609,19 +638,32 @@ class Pre_fot5 implements PreInterface
             }
         }
 
-        /**
-         * If transaction only contains geometry and is VANDLOEBSMIDTE
-         */
+        // If transaction only contains geometry and is VANDLOEBSMIDTE
+        // ===========================================================
         if (isset($fotArr["gml:featureMember"]["VANDLOEBSMIDTE"])) {
             $liveAttrs = $fotArr["gml:featureMember"]["VANDLOEBSMIDTE"];
             if ($arr["Property"][0]["Name"] == "the_geom" && sizeof($arr["Property"]) == 1 && isset($arr["Property"][0]["Value"]["LineString"])) {
                 $this->log(print_r("\n*** Feature indeholder kun geom og er linestring ***\n", true));
 
+                // Midtebredde
+                // ===========
+
                 $arr["Property"][1]["Name"] = "midtebredde";
-                $arr["Property"][1]["Value"] = $liveAttrs["Midtebredde"]["VANDLOEBSMIDTE_Midtebredde"]["indhold"];
+                $arr["Property"][1]["Value"] = $this->createPgArray(
+                    $liveAttrs["Midtebredde"],
+                    $this->layer,
+                    "Midtebredde"
+                );
+
+                // Synlig_vandloebsmidte
+                // =====================
 
                 $arr["Property"][2]["Name"] = "synlig_vandloebsmidte";
-                $arr["Property"][2]["Value"] = $liveAttrs["Synlig_Vandloebsmidte"]["VANDLOEBSMIDTE_Synlig_Vandloebsmidte"]["indhold"];
+                $arr["Property"][2]["Value"] = $this->createPgArray(
+                    $liveAttrs["Synlig_Vandloebsmidte"],
+                    $this->layer,
+                    "Synlig_Vandloebsmidte"
+                );
 
             }
         }
@@ -708,8 +750,6 @@ class Pre_fot5 implements PreInterface
                 </' . $this->layer . '>
             </wfs:Insert>';
         self::$count++;
-
-        //$this->log(print_r(self::$transactions, true));
 
         $res = [];
         $res["arr"] = $arr;
