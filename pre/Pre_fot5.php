@@ -437,7 +437,7 @@ class Pre_fot5 implements PreInterface
     {
         global $coords;
         $z = -999;
-        $snapToleranceTmp = 1000000;
+        $snapToleranceTmp = 10;
         $countTmp = 0;
         for ($u = 1; $u < sizeof($coords); $u++) {
             $diffX = $coords[$u][0] - $coord[0];
@@ -457,9 +457,12 @@ class Pre_fot5 implements PreInterface
         return $z;
     }
 
-    private function getZCoord()
+    private function getZCoord($p)
     {
-
+        $res = \app\inc\Util::wget("http://services.kortforsyningen.dk/?servicename=RestGeokeys_v2&elevationmodel=dtm&method=hoejde&geop=" . $p[0] . "," . $p[1] . "&login=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&password=" . App::$param["fot5"]["kortforsyningen"]["password"]);
+        $obj = json_decode($res);
+        $this->log(print_r($obj, true));
+        return $obj->hoejde;
     }
 
     // Start of implemented methods
@@ -558,6 +561,11 @@ class Pre_fot5 implements PreInterface
                 $coords = explode(" ", $item);
                 foreach ($coords as $coord) {
                     $z = $this->snapCoordToZ(explode(",", $coord));
+
+                    if ($z < -100) {
+                        $z = $this->getZCoord(explode(",", $coord));
+                    }
+
                     $coord = $coord . "," . $z;
                     $coordsWithZ[] = $coord;
                 }
@@ -738,7 +746,8 @@ class Pre_fot5 implements PreInterface
                 $coordsWithZ = [];
                 $coords = explode(" ", $item);
                 foreach ($coords as $coord) {
-                    $coord = $coord . ",1.23";
+                    $z = $this->getZCoord(explode(",", $coord));
+                    $coord = $coord . "," . $z;
                     $coordsWithZ[] = $coord;
                 }
                 $item = implode(" ", $coordsWithZ);
@@ -773,9 +782,9 @@ class Pre_fot5 implements PreInterface
     {
         global $postgisschema;
 
-        if(!is_array($arr["Filter"]["FeatureId"][0])){
+        if (!is_array($arr["Filter"]["FeatureId"][0])) {
             $arr["Filter"]["FeatureId"][0] = $arr["Filter"]["FeatureId"];
-            unset( $arr["Filter"]["FeatureId"]["fid"]);
+            unset($arr["Filter"]["FeatureId"]["fid"]);
         }
 
         if (!$this->checkTypeName($typeName)) {
@@ -787,7 +796,7 @@ class Pre_fot5 implements PreInterface
         }
 
         foreach ($arr["Filter"]["FeatureId"] as $featureId) {
-             // Get FotId by looking up gml_id in table, because some clients doesn't send unaltered fields.
+            // Get FotId by looking up gml_id in table, because some clients doesn't send unaltered fields.
             $tableAndGid = explode(".", $featureId["fid"]);
             $sql = "SELECT * FROM {$postgisschema}.{$tableAndGid[0]} WHERE gid={$tableAndGid[1]}";
             $res = $this->db->execQuery($sql);
