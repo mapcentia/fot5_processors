@@ -23,6 +23,8 @@ class Pre_fot5 implements PreInterface
     private $db;
     private $layer;
     private $metaData;
+    private $gc2User;
+
 
     /**
      * Holds the current feature being updated
@@ -44,10 +46,13 @@ class Pre_fot5 implements PreInterface
             'typeHints' => FALSE
         );
         $this->unserializer = new \XML_Unserializer($unserializer_options);
-        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodanmark.log", "w");
+        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodanmark.log", "a");
         if (!self::$count) {
             self::$count = 1;
         }
+
+        $this->gc2User = \app\inc\Input::getPath()->part(2);
+
     }
 
     function __destruct()
@@ -136,7 +141,6 @@ class Pre_fot5 implements PreInterface
             "rundkoersel" => ["Rundkoersel", true],
             "trafikart" => ["Trafikart", true],
             "vejklasse" => ["Vejklasse", true],
-            "vejbredde" => ["Vejbredde", false],
             "overflade" => ["Overflade", true],
             "tilogfrakoersel" => ["Tilogfrakoersel", true],
             "slutknude_vej" => ["Slutknude_Vej", false],
@@ -166,9 +170,13 @@ class Pre_fot5 implements PreInterface
             "synlig_vandloebsmidte" => ["Synlig_Vandloebsmidte", true],
             "vandloebstype" => ["Vandloebstype", false],
 
+            // META
+            "meta_noejagtighed" => ["meta_noejagtighed", false],
+
 
         ];
         $flags = [];
+
         foreach ($arr as $prop) {
             switch ($prop["Name"]) {
                 case "gml_id":
@@ -176,11 +184,8 @@ class Pre_fot5 implements PreInterface
                 case "the_geom":
                     break;
 
-                case "meta_producentinfo":
-                    if (!$prop["Value"]) {
-                        makeExceptionReport("Du skal angive 'meta_producentinfo'");
-                    }
-                    $this->metaData["meta_producentinfo"] = $prop["Value"];
+                case "meta_noejagtighed":
+                    $this->metaData["meta_noejagtighed"] = $prop["Value"];
                     break;
                 default:
                     if (array_reverse(explode("_", $prop["Name"]))[0] == "fra" || array_reverse(explode("_", $prop["Name"]))[0] == "til") {
@@ -242,6 +247,10 @@ class Pre_fot5 implements PreInterface
                 $value = $this->pgArrayParse($value);
             }
         }
+
+        // Update
+        // ======
+
         if ($operationType == "update") {
             $el = "";
 
@@ -285,6 +294,9 @@ class Pre_fot5 implements PreInterface
                 $el .= "<wfs:Value{$attrStr}>" . trim($value) . "</wfs:Value>\n";
                 $el .= "</wfs:Property>\n";
             }
+
+            // Insert
+            // ======
 
         } else {
             $el = "";
@@ -382,7 +394,7 @@ class Pre_fot5 implements PreInterface
                     <OLVstepDesc>' . ($values["OLVstepDesc"] ?: "Manuel") . '</OLVstepDesc>
 
                     <!--Nøjagtighed. Nøjagtighed af XY koordinater-->
-                    <OPLquanValDQPosAcc>' . "0.30 m" . '</OPLquanValDQPosAcc>
+                    <OPLquanValDQPosAcc>' . ($this->metaData["meta_noejagtighed"] ?: $values["OPLquanValDQPosAcc"]) . '</OPLquanValDQPosAcc>
 
                     <!--Nøjagtighed. Enhed for XY - nøjagtigheden-->
                     <OPLquanValUnitDQPosAcc>Meter</OPLquanValUnitDQPosAcc>
@@ -394,13 +406,13 @@ class Pre_fot5 implements PreInterface
                     <OPLstepDesc>' . ($values["OPLstepDesc"] ?: "Manuel") . '</OPLstepDesc>
 
                     <!--Producentinfo. Hvilken organisation har sidst rettet på objektet-->
-                    <OPROOrgName>' . ($this->metaData["meta_producentinfo"] ?: $values["OPROOrgName"]) . '</OPROOrgName>
+                    <OPROOrgName>' . App::$param["fot5"]["geodanmark"][$this->gc2User]["prod"] . '</OPROOrgName>
 
                     <!--Producentinfo. Hvilken rolle har denne organisation, altid "Principal investigator"-->
                     <OPROrole>Principal investigator</OPROrole>
 
                     <!--Myndighedskontakt. Hvem har ansvaret for objektet-->
-                    <ORPOrgName>' . ($this->metaData["meta_producentinfo"] ?: $values["ORPOrgName"]) . '</ORPOrgName>
+                    <ORPOrgName>' . App::$param["fot5"]["geodanmark"][$this->gc2User]["prod"] . '</ORPOrgName>
 
                     <!--Myndighedskontakt. Hvilken rolle har denne organisation-->
                     <ORProle>' . ($values["ORProle"] ?: "owner") . '</ORProle>
@@ -445,7 +457,8 @@ class Pre_fot5 implements PreInterface
         return $z;
     }
 
-    private function getZCoord(){
+    private function getZCoord()
+    {
 
     }
 
@@ -760,6 +773,11 @@ class Pre_fot5 implements PreInterface
     {
         global $postgisschema;
 
+        if(!is_array($arr["Filter"]["FeatureId"][0])){
+            $arr["Filter"]["FeatureId"][0] = $arr["Filter"]["FeatureId"];
+            unset( $arr["Filter"]["FeatureId"]["fid"]);
+        }
+
         if (!$this->checkTypeName($typeName)) {
             $res = [];
             $res["arr"] = $arr;
@@ -768,21 +786,20 @@ class Pre_fot5 implements PreInterface
             return $res;
         }
 
-        /**
-         * Get FotId by looking up gml_id in table, because some clients doesn't send unaltered fields.
-         */
-        $tableAndGid = explode(".", $arr["Filter"]["FeatureId"]["fid"]);
-        $sql = "SELECT * FROM {$postgisschema}.{$tableAndGid[0]} WHERE gid={$tableAndGid[1]}";
-        $res = $this->db->execQuery($sql);
-        $row = $this->db->fetchRow($res);
-        $fotId = $row["gml_id"];
+        foreach ($arr["Filter"]["FeatureId"] as $featureId) {
+             // Get FotId by looking up gml_id in table, because some clients doesn't send unaltered fields.
+            $tableAndGid = explode(".", $featureId["fid"]);
+            $sql = "SELECT * FROM {$postgisschema}.{$tableAndGid[0]} WHERE gid={$tableAndGid[1]}";
+            $res = $this->db->execQuery($sql);
+            $row = $this->db->fetchRow($res);
+            $fotId = $row["gml_id"];
 
-        self::$transactions .= '<wfs:Delete typeName="' . $this->layer . '">
+            self::$transactions .= '<wfs:Delete typeName="' . $this->layer . '">
                     <ogc:Filter>
                         <ogc:GmlObjectId gml:id="' . $fotId . '"/>
                     </ogc:Filter>
                 </wfs:Delete>';
-
+        }
         $res = [];
         $res["arr"] = $arr;
         $res["success"] = true;

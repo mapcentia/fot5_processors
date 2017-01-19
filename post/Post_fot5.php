@@ -23,7 +23,7 @@ class Post_fot5 implements PostInterface
             'typeHints' => FALSE
         );
         $this->unserializer = new \XML_Unserializer($unserializer_options);
-        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodanmark.log", "a");
+        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodanmark.log", "w");
     }
 
     function __destruct()
