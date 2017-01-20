@@ -113,59 +113,77 @@ class Post_fot5 implements PostInterface
             $res["message"] = print_r($resFromFot["Exception"]["ExceptionText"]["fejlrapport"]["objektype"], true);
         } else {
             $res["success"] = true;
-            $oldFotId = $resFromFot["wfs:InsertResults"]["wfs:Feature"]["handle"];
-            $newFotId = $resFromFot["wfs:InsertResults"]["wfs:Feature"]["ogc:FeatureId"]["fid"];
 
-            // Store the new FeatureId for BYGNING in PostgreSQL
-            // =================================================
-
-            $sql = "UPDATE {$postgisschema}.bygning SET gml_id=:new WHERE gml_id=:old";
-            $resUpdate = $this->db->prepare($sql);
-            try {
-                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
-            } catch (\PDOException $e) {
-                $res["success"] = false;
-                $res["message"] = $e->getMessage();
-                return $res;
+            // If single edit, make result array with one key
+            // ==============================================
+            
+            if (!is_array($resFromFot["wfs:InsertResults"]["wfs:Feature"][0])) {
+                $resFromFot["wfs:InsertResults"]["wfs:Feature"][0] = $resFromFot["wfs:InsertResults"]["wfs:Feature"];
+                unset($resFromFot["wfs:InsertResults"]["wfs:Feature"]["handle"]);
+                unset($resFromFot["wfs:InsertResults"]["wfs:Feature"]["ogc:FeatureId"]);
             }
+            //$this->log(print_r($resFromFot, true));
+            foreach ($resFromFot["wfs:InsertResults"]["wfs:Feature"] as $feature) {
 
-            // Store the new FeatureId for VEJMIDTE in PostgreSQL
-            // ==================================================
+                $oldFotId = $feature["handle"];
+                $newFotId = $feature["ogc:FeatureId"]["fid"];
 
-            $sql = "UPDATE {$postgisschema}.vejmidte SET gml_id=:new WHERE gml_id=:old";
-            $resUpdate = $this->db->prepare($sql);
-            try {
-                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
-            } catch (\PDOException $e) {
-                $res["success"] = false;
-                $res["message"] = $e->getMessage();
-                return $res;
-            }
+                $this->log("Old FotID: " . $oldFotId . "\n");
+                $this->log("New FotID: " . $newFotId . "\n\n");
 
-            // Store the new FeatureId for SOE in PostgreSQL
-            // =============================================
 
-            $sql = "UPDATE {$postgisschema}.soe SET gml_id=:new WHERE gml_id=:old";
-            $resUpdate = $this->db->prepare($sql);
-            try {
-                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
-            } catch (\PDOException $e) {
-                $res["success"] = false;
-                $res["message"] = print_r($e, true);
-                return $res;
-            }
+                // Store the new FeatureId for BYGNING in PostgreSQL
+                // =================================================
 
-            // Store the new FeatureId for VANDLOEBSMIDTE in PostgreSQL
-            // ========================================================
+                $sql = "UPDATE {$postgisschema}.bygning SET gml_id=:new WHERE gml_id=:old";
+                $resUpdate = $this->db->prepare($sql);
+                try {
+                    $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                } catch (\PDOException $e) {
+                    $res["success"] = false;
+                    $res["message"] = $e->getMessage();
+                    return $res;
+                }
 
-            $sql = "UPDATE {$postgisschema}.vandloebsmidte SET gml_id=:new WHERE gml_id=:old";
-            $resUpdate = $this->db->prepare($sql);
-            try {
-                $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
-            } catch (\PDOException $e) {
-                $res["success"] = false;
-                $res["message"] = print_r($e, true);
-                return $res;
+                // Store the new FeatureId for VEJMIDTE in PostgreSQL
+                // ==================================================
+
+                $sql = "UPDATE {$postgisschema}.vejmidte SET gml_id=:new WHERE gml_id=:old";
+                $resUpdate = $this->db->prepare($sql);
+                try {
+                    $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                } catch (\PDOException $e) {
+                    $res["success"] = false;
+                    $res["message"] = $e->getMessage();
+                    return $res;
+                }
+
+                // Store the new FeatureId for SOE in PostgreSQL
+                // =============================================
+
+                $sql = "UPDATE {$postgisschema}.soe SET gml_id=:new WHERE gml_id=:old";
+
+                $resUpdate = $this->db->prepare($sql);
+                try {
+                    $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                } catch (\PDOException $e) {
+                    $res["success"] = false;
+                    $res["message"] = print_r($e, true);
+                    return $res;
+                }
+
+                // Store the new FeatureId for VANDLOEBSMIDTE in PostgreSQL
+                // ========================================================
+
+                $sql = "UPDATE {$postgisschema}.vandloebsmidte SET gml_id=:new WHERE gml_id=:old";
+                $resUpdate = $this->db->prepare($sql);
+                try {
+                    $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                } catch (\PDOException $e) {
+                    $res["success"] = false;
+                    $res["message"] = print_r($e, true);
+                    return $res;
+                }
             }
         }
         return $res;
