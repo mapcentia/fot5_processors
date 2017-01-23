@@ -23,7 +23,8 @@ class Post_fot5 implements PostInterface
             'typeHints' => FALSE
         );
         $this->unserializer = new \XML_Unserializer($unserializer_options);
-        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodanmark.log", "w");
+        $this->gc2User = \app\inc\Input::getPath()->part(2);
+        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodk_" . App::$param["fot5"]["geodanmark"][$this->gc2User]["user"] . ".log", "a");
     }
 
     function __destruct()
@@ -66,7 +67,6 @@ class Post_fot5 implements PostInterface
     public function process()
     {
         global $postgisschema;
-        $this->gc2User = \app\inc\Input::getPath()->part(2);
         if (!Pre_fot5::$flag) {
             return ["success" => true];
         }
@@ -116,7 +116,7 @@ class Post_fot5 implements PostInterface
 
             // If single edit, make result array with one key
             // ==============================================
-            
+
             if (!is_array($resFromFot["wfs:InsertResults"]["wfs:Feature"][0])) {
                 $resFromFot["wfs:InsertResults"]["wfs:Feature"][0] = $resFromFot["wfs:InsertResults"]["wfs:Feature"];
                 unset($resFromFot["wfs:InsertResults"]["wfs:Feature"]["handle"]);

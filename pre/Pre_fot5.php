@@ -45,14 +45,12 @@ class Pre_fot5 implements PreInterface
             'parseAttributes' => TRUE,
             'typeHints' => FALSE
         );
+        $this->gc2User = \app\inc\Input::getPath()->part(2);
         $this->unserializer = new \XML_Unserializer($unserializer_options);
-        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodanmark.log", "a");
+        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodk_" . App::$param["fot5"]["geodanmark"][$this->gc2User]["user"] . ".log", "a");
         if (!self::$count) {
             self::$count = 1;
         }
-
-        $this->gc2User = \app\inc\Input::getPath()->part(2);
-
     }
 
     function __destruct()
