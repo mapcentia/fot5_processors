@@ -47,7 +47,7 @@ class Pre_fot5 implements PreInterface
         );
         $this->gc2User = \app\inc\Input::getPath()->part(2);
         $this->unserializer = new \XML_Unserializer($unserializer_options);
-        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodk_" . App::$param["fot5"]["geodanmark"][$this->gc2User]["user"] . ".log", "a");
+        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodk_" . App::$param["fot5"]["geodanmark"][$this->gc2User]["user"] . ".log", "w");
         if (!self::$count) {
             self::$count = 1;
         }

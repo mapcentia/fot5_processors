@@ -13,6 +13,7 @@ class Post_fot5 implements PostInterface
     private $unserializer;
     private $db;
     private $gc2User;
+    private $service;
 
     function __construct($db)
     {
@@ -24,7 +25,13 @@ class Post_fot5 implements PostInterface
         );
         $this->unserializer = new \XML_Unserializer($unserializer_options);
         $this->gc2User = \app\inc\Input::getPath()->part(2);
-        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodk_" . App::$param["fot5"]["geodanmark"][$this->gc2User]["user"] . ".log", "a");
+
+        // Set TEST or PROD system
+        // =======================
+
+        $this->service = \app\inc\Input::getPath()->part(3) == "fot" ? "fotupload.kms.dk" : "fot.kms.dk";
+
+        $this->logFile = fopen(dirname(__FILE__) . "/../../../../../public/logs/geodk_" . App::$param["fot5"]["geodanmark"][$this->gc2User]["user"] . ".log", "w");
     }
 
     function __destruct()
@@ -56,7 +63,7 @@ class Post_fot5 implements PostInterface
      */
     private function post($transactionXml)
     {
-        $ch = curl_init("https://fot.kms.dk/FAS/TransactionServlet");
+        $ch = curl_init("https://" . $this->service . "/FAS/TransactionServlet");
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, 0);
