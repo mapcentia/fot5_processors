@@ -187,14 +187,24 @@ class Pre_fot5 implements PreInterface
                     break;
                 default:
                     if (array_reverse(explode("_", $prop["Name"]))[0] == "fra" || array_reverse(explode("_", $prop["Name"]))[0] == "til") {
-                        if (!in_array(explode("_", $prop["Name"])[0], $attrArray) && !isset($flags[explode("_", $prop["Name"])[0]])) {
-                            $val = $this->createPgArray($this->liveFeature["gml:featureMember"][$this->layer][$attrList[explode("_", $prop["Name"])[0]][0]], $this->layer, $attrList[explode("_", $prop["Name"])[0]][0]);
-                            $properties .= $this->createProperty($attrList[explode("_", $prop["Name"])[0]][0],
+
+                        // In case of Synlig_Vandloebsmidte with an underscore
+                        // ===================================================
+
+                        if (sizeof(explode("_", $prop["Name"])) > 2) {
+                            $propName = explode("_", $prop["Name"])[0] . "_" . explode("_", $prop["Name"])[1];
+                        } else {
+                            $propName = explode("_", $prop["Name"])[0];
+                        }
+
+                        if (!in_array($propName, $attrArray) && !isset($flags[$propName])) {
+                            $val = $this->createPgArray($this->liveFeature["gml:featureMember"][$this->layer][$attrList[$propName][0]], $this->layer, $attrList[$propName][0]);
+                            $properties .= $this->createProperty($attrList[$propName][0],
                                 $val,
                                 $operationType,
                                 ["fra" => $lineLengthFrom, "til" => $lineLengthTo],
                                 $arr);
-                            $flags[explode("_", $prop["Name"])[0]] = true;
+                            $flags[$propName] = true;
                         }
                         break;
                     }
