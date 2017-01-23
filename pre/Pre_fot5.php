@@ -232,6 +232,9 @@ class Pre_fot5 implements PreInterface
      */
     private function createProperty($name, $value, $operationType, $attrs = null, $fullFeature = null)
     {
+        if (!$name) {
+            return null;
+        }
         $tmp = [];
         $attrStr = "";
         $fra = [];
