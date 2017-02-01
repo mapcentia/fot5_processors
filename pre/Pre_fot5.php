@@ -89,6 +89,9 @@ class Pre_fot5 implements PreInterface
             $arr = $tmp;
         }
         foreach ($arr as $prop) {
+            if (sizeof(explode(":", $prop["Name"])) > 1) {
+                $prop["Name"] = explode(":", $prop["Name"])[1];
+            }
             switch ($prop["Name"]) {
                 case "the_geom";
 
@@ -98,10 +101,18 @@ class Pre_fot5 implements PreInterface
                     $geom = $prop["Value"];
                     $this->serializer->serialize($geom);
                     $wktArr = $this->gmlCon->gmlToWKT($this->serializer->getSerializedData(), array());
+
+                    if (strpos($wktArr[0][0], 'MULTI') !== false) {
+                        $wktArr[0][0] = str_replace("MULTI", "", $wktArr[0][0]);
+                        $wktArr[0][0] = str_replace("((", "(", $wktArr[0][0]);
+                        $wktArr[0][0] = str_replace("))", ")", $wktArr[0][0]);
+                    }
+
                     $sql = "WITH q AS (SELECT ST_GeomFromText('{$wktArr[0][0]}',{$wktArr[1][0]}) as gml3) SELECT ST_AsGML(3, ST_Transform(gml3,25832),14,4) AS gml3, ST_GeometryType(gml3) AS type, ST_Length(ST_Transform(gml3,25832)) AS length from q;";
                     $res = $this->db->execQuery($sql);
                     $row = $this->db->fetchRow($res);
-
+                    $this->log($sql . "\n");
+                    $this->log($row["type"] . "\n");
                     if ($row["type"] == "ST_Polygon") {
                         $geom = $this->createProperty("gml:surfaceProperty", $row["gml3"], $operationType);
                     } else {
@@ -243,6 +254,9 @@ class Pre_fot5 implements PreInterface
     private function createProperty($name, $value, $operationType, $attrs = null, $fullFeature = null)
     {
         if (!$name) {
+            return null;
+        }
+        if ($value === "") {
             return null;
         }
         $tmp = [];
@@ -486,6 +500,8 @@ class Pre_fot5 implements PreInterface
     public function processUpdate($arr, $typeName)
     {
 
+        $this->log(print_r($arr, true));
+
         global $postgisschema;
 
         /**
@@ -590,7 +606,7 @@ class Pre_fot5 implements PreInterface
 
         if (isset($fotArr["gml:featureMember"]["VEJMIDTE"])) {
             $liveAttrs = $fotArr["gml:featureMember"]["VEJMIDTE"];
-            if ($arr["Property"][0]["Name"] == "the_geom" && sizeof($arr["Property"]) == 1 && isset($arr["Property"][0]["Value"]["LineString"])) {
+            if (dropAllNameSpaces($arr["Property"][0]["Name"]) == "the_geom" && sizeof($arr["Property"]) == 1 && (isset($arr["Property"][0]["Value"]["LineString"]) || isset($arr["Property"][0]["Value"]["MultiLineString"]))) {
                 $this->log(print_r("\n*** Feature indeholder kun geom og er linestring ***\n", true));
 
                 // Fiktiv
@@ -671,7 +687,7 @@ class Pre_fot5 implements PreInterface
         // ===========================================================
         if (isset($fotArr["gml:featureMember"]["VANDLOEBSMIDTE"])) {
             $liveAttrs = $fotArr["gml:featureMember"]["VANDLOEBSMIDTE"];
-            if ($arr["Property"][0]["Name"] == "the_geom" && sizeof($arr["Property"]) == 1 && isset($arr["Property"][0]["Value"]["LineString"])) {
+            if (dropAllNameSpaces($arr["Property"][0]["Name"]) == "the_geom" && sizeof($arr["Property"]) == 1 && (isset($arr["Property"][0]["Value"]["LineString"]) || isset($arr["Property"][0]["Value"]["MultiLineString"]))) {
                 $this->log(print_r("\n*** Feature indeholder kun geom og er linestring ***\n", true));
 
                 // Midtebredde
@@ -736,6 +752,8 @@ class Pre_fot5 implements PreInterface
      */
     public function processInsert($arr, $typeName)
     {
+
+        $this->log(print_r($arr, true));
         if (!$this->checkTypeName($typeName)) {
             $res = [];
             $res["arr"] = $arr;

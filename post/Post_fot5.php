@@ -94,7 +94,7 @@ class Post_fot5 implements PostInterface
 
 
         $this->log("<---------- " . date('l jS \of F Y H:i:s') . " user: " . App::$param["fot5"]["geodanmark"][$this->gc2User]["user"] . " ---------->\n\n");
-        $this->log(($this->formatXml($transactionsReady)) . "\n");
+        $this->log($this->formatXml($transactionsReady) . "\n");
 
         // HACK
         $transactionsReady = str_replace(' srsDimension="3"', "", $transactionsReady);
@@ -103,6 +103,8 @@ class Post_fot5 implements PostInterface
         $buffer = $this->post($transactionsReady);
 
         $this->log("<---------- Response fra Geodanmark ---------->\n\n");
+
+        $buffer = preg_replace("/<[0-9]>/", "", $buffer);
 
         $this->log($this->formatXml($buffer) . "\n\n");
         $this->log("\n\n");
@@ -117,7 +119,7 @@ class Post_fot5 implements PostInterface
         $res = [];
         if ($resFromFot["Exception"]) {
             $res["success"] = false;
-            $res["message"] = print_r($resFromFot["Exception"]["ExceptionText"]["fejlrapport"]["objektype"], true);
+            $res["message"] = print_r($resFromFot["Exception"]["ExceptionText"]["fejlrapport"]["objektype"] ?: $resFromFot["Exception"]["ExceptionText"], true);
         } else {
             $res["success"] = true;
 
