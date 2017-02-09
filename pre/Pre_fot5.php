@@ -24,6 +24,7 @@ class Pre_fot5 implements PreInterface
     private $layer;
     private $metaData;
     private $gc2User;
+    private $wfsService;
 
 
     /**
@@ -51,6 +52,7 @@ class Pre_fot5 implements PreInterface
         if (!self::$count) {
             self::$count = 1;
         }
+        $this->wfsService = \app\inc\Input::getPath()->part(3) == "fot" ? "fot2007_nohistory" : "fot2007_nohistory_test";
     }
 
     function __destruct()
@@ -529,7 +531,7 @@ class Pre_fot5 implements PreInterface
          *  Get the live feature from Kortforsyningen WFS
          */
         if ($fotId) {
-            $featureFromWfs = Util::wget("http://kortforsyningen.kms.dk/fot2007_nohistory_test?LOGIN=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&PASSWORD=" . App::$param["fot5"]["kortforsyningen"]["password"] . "&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME={$this->layer}&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $fotId);
+            $featureFromWfs = Util::wget("http://kortforsyningen.kms.dk/" . $this->wfsService . "?LOGIN=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&PASSWORD=" . App::$param["fot5"]["kortforsyningen"]["password"] . "&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME={$this->layer}&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $fotId);
             //TODO check if there is a feature
             //makeExceptionReport("Kan ikke hente feature fra Kortforsyningen. Måske er den opdateret i mellemtiden?");
 
@@ -569,7 +571,7 @@ class Pre_fot5 implements PreInterface
         // and unserialize to array
         // =====================================================
 
-        $metaDataFromWfs = Util::wget("http://kortforsyningen.kms.dk/fot2007_nohistory_test?LOGIN=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&PASSWORD=" . App::$param["fot5"]["kortforsyningen"]["password"] . "&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=ObjektMetadata&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $metaObjectId);
+        $metaDataFromWfs = Util::wget("http://kortforsyningen.kms.dk/" . $this->wfsService . "?LOGIN=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&PASSWORD=" . App::$param["fot5"]["kortforsyningen"]["password"] . "&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=ObjektMetadata&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $metaObjectId);
         //TODO check if there is a feature
 
         $this->unserializer->setOptions(["parseAttributes" => false]);
