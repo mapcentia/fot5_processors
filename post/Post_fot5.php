@@ -193,6 +193,32 @@ class Post_fot5 implements PostInterface
                     $res["message"] = print_r($e, true);
                     return $res;
                 }
+
+                // Store the new FeatureId for VEJKANT in PostgreSQL
+                // =================================================
+
+                $sql = "UPDATE {$postgisschema}.vejkant SET gml_id=:new WHERE gml_id=:old";
+                $resUpdate = $this->db->prepare($sql);
+                try {
+                    $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                } catch (\PDOException $e) {
+                    $res["success"] = false;
+                    $res["message"] = print_r($e, true);
+                    return $res;
+                }
+
+                // Store the new FeatureId for VANDLOEBSKANT in PostgreSQL
+                //// =====================================================
+
+                $sql = "UPDATE {$postgisschema}.vandloebskant SET gml_id=:new WHERE gml_id=:old";
+                $resUpdate = $this->db->prepare($sql);
+                try {
+                    $resUpdate->execute(["new" => $newFotId, "old" => $oldFotId]);
+                } catch (\PDOException $e) {
+                    $res["success"] = false;
+                    $res["message"] = print_r($e, true);
+                    return $res;
+                }
             }
         }
         return $res;

@@ -80,6 +80,8 @@ class Pre_fot5 implements PreInterface
      */
     private function createProperties($arr, $operationType, $length = null)
     {
+
+
         $properties = "";
         $geom = "";
         $lineLengthTo = null;
@@ -142,7 +144,7 @@ class Pre_fot5 implements PreInterface
         }
         $attrList = [
             "objekt_status" => ["Objekt_status", false],
-            "kommunekode" => ["Kommunekode", false],
+            "vejkode" => ["Vejkode", false],
             "geometri_status" => ["Geometri_status", false],
             "vejmidtetype" => ["Vejmidtetype", false],
             "vejmyndighed" => ["Vejmyndighed", false],
@@ -168,7 +170,6 @@ class Pre_fot5 implements PreInterface
             "salt_soe" => ["Salt_Soe", false],
             "soe_under_minimum" => ["Soe_Under_Minimum", false],
             "soetype" => ["Soetype", false],
-            "temporaer" => ["Temporaer", false],
 
             // VANDSLOEBSMIDTE
             "ejer_vandloebsmidte" => ["Ejer_Vandloebsmidte", false],
@@ -181,10 +182,16 @@ class Pre_fot5 implements PreInterface
             "synlig_vandloebsmidte" => ["Synlig_Vandloebsmidte", true],
             "vandloebstype" => ["Vandloebstype", false],
 
+            // VEJKANT
+            "type" => ["Type", false],
+            "synlig_vejkant" => ["Synlig_Vejkant", false],
+
+            // VANDLOEBSKANT
+            "synlig_vandbred" => ["Synlig_VandBred", false],
+            "under_minimum_vandkant" => ["Under_Minimum_Vandkant", false],
+
             // META
             "meta_noejagtighed" => ["meta_noejagtighed", false],
-
-
         ];
         $flags = [];
 
@@ -198,6 +205,7 @@ class Pre_fot5 implements PreInterface
                 case "meta_noejagtighed":
                     $this->metaData["meta_noejagtighed"] = $prop["Value"];
                     break;
+
                 default:
                     if (array_reverse(explode("_", $prop["Name"]))[0] == "fra" || array_reverse(explode("_", $prop["Name"]))[0] == "til") {
 
@@ -229,6 +237,16 @@ class Pre_fot5 implements PreInterface
                     break;
             }
         }
+
+        // Set some hard coded values
+        // ==========================
+        if ($this->layer == "VEJMIDTE") {
+            $properties .= $this->createProperty("Kommunekode", App::$param["fot5"]["geodanmark"][$this->gc2User]["komkode"], $operationType);
+        }
+        if ($this->layer == "SOE") {
+            $properties .= $this->createProperty("Temporaer", "0", $operationType);
+        }
+
         return $properties . $geom;
     }
 
@@ -363,7 +381,7 @@ class Pre_fot5 implements PreInterface
      */
     static public function getLayerWhitelist()
     {
-        return ["BYGNING", "VEJMIDTE", "SOE", "VANDLOEBSMIDTE"];
+        return ["BYGNING", "VEJMIDTE", "SOE", "VANDLOEBSMIDTE", "VEJKANT", "VANDLOEBSKANT"];
     }
 
     /**
@@ -486,7 +504,9 @@ class Pre_fot5 implements PreInterface
 
     private function getZCoord($p)
     {
-        $res = \app\inc\Util::wget("http://services.kortforsyningen.dk/?servicename=RestGeokeys_v2&elevationmodel=dtm&method=hoejde&geop=" . $p[0] . "," . $p[1] . "&login=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&password=" . App::$param["fot5"]["kortforsyningen"]["password"]);
+        $url = "http://services.kortforsyningen.dk/?servicename=RestGeokeys_v2&elevationmodel=dtm&method=hoejde&geop=" . $p[0] . "," . $p[1] . "&login=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&password=" . App::$param["fot5"]["kortforsyningen"]["password"];
+        $this->log($url);
+        $res = \app\inc\Util::wget($url);
         $obj = json_decode($res);
         $this->log(print_r($obj, true));
         return $obj->hoejde;
@@ -501,9 +521,7 @@ class Pre_fot5 implements PreInterface
      */
     public function processUpdate($arr, $typeName)
     {
-
         $this->log(print_r($arr, true));
-
         global $postgisschema;
 
         /**
@@ -531,10 +549,12 @@ class Pre_fot5 implements PreInterface
          *  Get the live feature from Kortforsyningen WFS
          */
         if ($fotId) {
-            $featureFromWfs = Util::wget("http://kortforsyningen.kms.dk/" . $this->wfsService . "?LOGIN=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&PASSWORD=" . App::$param["fot5"]["kortforsyningen"]["password"] . "&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME={$this->layer}&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $fotId);
-            //TODO check if there is a feature
-            //makeExceptionReport("Kan ikke hente feature fra Kortforsyningen. Måske er den opdateret i mellemtiden?");
-
+            $url = "http://kortforsyningen.kms.dk/" . $this->wfsService . "?LOGIN=" . App::$param["fot5"]["kortforsyningen"]["login"] . "&PASSWORD=" . App::$param["fot5"]["kortforsyningen"]["password"] . "&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME={$this->layer}&SRSNAME=urn:ogc:def:crs:EPSG::25832&featureId=" . $fotId;
+            $featureFromWfs = Util::wget($url);
+            if (!$featureFromWfs) {
+                makeExceptionReport("Forbindelsen til GeoDanmark kunne til etabeleres.");
+            }
+            $this->log($url);
         } else {
             makeExceptionReport("Hej");
         }
@@ -681,7 +701,6 @@ class Pre_fot5 implements PreInterface
                     $this->layer,
                     "Vejklasse"
                 );
-
             }
         }
 
