@@ -234,13 +234,19 @@ class Pre_fot5 implements PreInterface
                         $operationType,
                         $attrList[$prop["Name"]][1] ? ["fra" => $lineLengthFrom, "til" => $lineLengthTo] : null,
                         $attrList[$prop["Name"]][1] ? $arr : null);
+
+                    if ($prop["Name"] == "geometri_status" && $this->layer == "VEJMIDTE" && $operationType == "insert") {
+                        $properties .= $this->createProperty("Kommunekode", App::$param["fot5"]["geodanmark"][$this->gc2User]["komkode"], $operationType);
+
+                    }
+
                     break;
             }
         }
 
         // Set some hard coded values
         // ==========================
-        if ($this->layer == "VEJMIDTE") {
+        if ($this->layer == "VEJMIDTE" && $operationType == "update") {
             $properties .= $this->createProperty("Kommunekode", App::$param["fot5"]["geodanmark"][$this->gc2User]["komkode"], $operationType);
         }
         if ($this->layer == "SOE") {
