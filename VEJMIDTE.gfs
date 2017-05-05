@@ -6,14 +6,14 @@
     <SRSName>urn:ogc:def:crs:EPSG::25832</SRSName>
 
     <PropertyDefn>
-      <Name>CPRkommune</Name>
-      <ElementPath>CPRkommune</ElementPath>
+      <Name>Kommunekode</Name>
+      <ElementPath>Kommunekode</ElementPath>
       <Type>String</Type>
     </PropertyDefn>
 
     <PropertyDefn>
-      <Name>CPRvejkode</Name>
-      <ElementPath>CPRvejkode</ElementPath>
+      <Name>Vejkode</Name>
+      <ElementPath>Vejkode</ElementPath>
       <Type>String</Type>
     </PropertyDefn>
 
